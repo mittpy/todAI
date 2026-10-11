@@ -1,0 +1,39 @@
+# todAI
+
+todAI is a small, responsive task manager built with Next.js. It keeps tasks private in a local SQLite database and provides a dashboard, searchable, paginated task list, and dedicated create/edit pages.
+
+## Requirements
+
+- Node.js 20.9 or newer
+- npm
+
+## Run locally
+
+```sh
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Tasks are stored in `data/todai.sqlite`; the directory and schema are created automatically. To choose a different database file, set `TASKS_DB_PATH` to its path before starting the app.
+
+## Checks
+
+```sh
+npm test
+npm run typecheck
+npm run build
+```
+
+## Storage and deployment
+
+SQLite uses write-ahead logging for reliable local reads and writes. Keep the database file and its `-wal`/`-shm` sidecars together, and back up the database when the app is stopped or after checkpointing. Production hosting must provide a persistent writable disk; ephemeral serverless filesystems are not suitable for durable storage.
+
+## Task API
+
+- `GET /api/tasks?q=term` — list tasks, optionally matching title or description
+- `POST /api/tasks` — create a task with a required title and optional description
+- `GET /api/tasks/:id` — fetch one task
+- `PATCH /api/tasks/:id` — update a task
+- `DELETE /api/tasks/:id` — delete a task
+
+Titles are trimmed and limited to 200 characters. Descriptions are optional and limited to 5,000 characters.
