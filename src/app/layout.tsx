@@ -31,7 +31,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="main-column">
             <header className="topbar">
               <span className="topbar-caption">YOUR PERSONAL WORKSPACE</span>
-              <Link className="button button-primary topbar-action" href="/tasks/new">＋ <span>New task</span></Link>
+              <Link className="button button-quiet topbar-action" href="/#task-list">
+                <span aria-hidden="true">▤</span> Tasks
+              </Link>
             </header>
             <main className="page-content">{children}</main>
           </div>
