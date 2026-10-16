@@ -20,9 +20,12 @@ Open [http://localhost:3000](http://localhost:3000). Tasks are stored in `data/t
 
 ```sh
 npm test
+npm run test:components
 npm run typecheck
 npm run build
 ```
+
+`npm run test:components:open` starts Cypress Component Testing interactively. Cypress component specs and the existing isolated task-data tests are kept under `tests/`. Component tests mount the task workspace directly and mock every API request with `cy.intercept`; they do not start the application backend or share server state.
 
 ## Storage and deployment
 

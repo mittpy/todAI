@@ -7,7 +7,7 @@ import { test } from "node:test";
 test("task persistence and validation", async (suite) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "todai-test-"));
   process.env.TASKS_DB_PATH = path.join(directory, "tasks.sqlite");
-  const tasks = await import("./tasks");
+  const tasks = await import("../src/lib/tasks");
   suite.after(async () => {
     await rm(directory, { recursive: true, force: true });
   });

@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/tasks.test.ts"
+    "test": "tsx --test tests/tasks.test.ts",
+    "test:components": "cypress run --component",
+    "test:components:open": "cypress open --component"
   },
   "dependencies": {
     "next": "^16.4.0",
@@ -20,6 +22,7 @@
     "@types/node": "^20.17.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "cypress": "^15.21.1",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0"
   },
