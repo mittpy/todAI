@@ -77,13 +77,13 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .task-card:hover { border-color: #f0c98f; }
 .task-card-deleting { opacity: .6; }
 .completion-toggle { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #aab4aa; cursor: pointer; transition: color .15s, transform .15s; }
-.completion-toggle:hover:not(:disabled) { color: var(--green); transform: scale(1.08); }
+.completion-toggle:hover:not(:disabled) { color: #2f855a; transform: scale(1.08); }
 .completion-toggle:disabled { cursor: wait; opacity: .65; }
 .completion-toggle svg { width: 23px; height: 23px; overflow: visible; }
 .completion-toggle circle { fill: white; stroke: currentColor; stroke-width: 1.7; transition: fill .15s, stroke .15s; }
 .completion-toggle path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.completion-toggle.is-completed { color: var(--green); }
-.completion-toggle.is-completed circle { fill: var(--green); stroke: var(--green); }
+.completion-toggle.is-completed { color: #2f855a; }
+.completion-toggle.is-completed circle { fill: #2f855a; stroke: #2f855a; }
 .completion-toggle.is-completed path { stroke: white; }
 .task-card-completed .task-card-content h3 { color: #8b918a; text-decoration: line-through; text-decoration-color: #b8c1b8; }
 .task-marker { display: grid; width: 21px; height: 21px; flex: 0 0 21px; place-items: center; border: 1px solid #f3e4d0; border-radius: 7px; background: #fffaf0; }

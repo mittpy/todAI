@@ -37,6 +37,7 @@ test("task persistence and validation", async (suite) => {
     description: "Initial note",
     priority: 3,
     dueDate: null,
+    completed: false,
   });
 
   await suite.test("creates tasks with required trimmed titles and optional descriptions", async () => {
@@ -47,6 +48,7 @@ test("task persistence and validation", async (suite) => {
       description: "",
       priority: 3,
       dueDate: null,
+      completed: false,
     });
     assert.deepEqual(await tasks.getTask(created.id), created);
   });
@@ -56,6 +58,7 @@ test("task persistence and validation", async (suite) => {
       title: "Prepare the release",
       priority: 1,
       dueDate: "2026-12-31",
+      completed: false,
     });
     assert.equal(created.priority, 1);
     assert.equal(created.dueDate, "2026-12-31");
@@ -103,7 +106,18 @@ test("task persistence and validation", async (suite) => {
       description: "Done",
       priority: 3,
       dueDate: null,
+      completed: false,
     });
+    const completed = await tasks.setTaskCompleted(1, true);
+    assert.equal(completed?.completed, true);
+    const editedCompletedTask = await tasks.updateTask(1, {
+      title: "Updated after completion",
+      description: "Done",
+    });
+    assert.equal(editedCompletedTask?.completed, true);
+    const reopened = await tasks.setTaskCompleted(1, false);
+    assert.equal(reopened?.completed, false);
+    assert.equal(await tasks.setTaskCompleted(999, true), undefined);
     assert.equal(await tasks.updateTask(999, { title: "Missing" }), undefined);
     assert.equal(await tasks.deleteTask(1), true);
     assert.equal(await tasks.deleteTask(1), false);

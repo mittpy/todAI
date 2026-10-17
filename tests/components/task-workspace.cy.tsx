@@ -9,6 +9,7 @@ const savedTask: Task = {
   description: "Prepare a short launch checklist",
   priority: 3,
   dueDate: null,
+  completed: false,
 };
 
 function mountWorkspace(tasks: Task[], total = tasks.length) {
@@ -189,5 +190,40 @@ describe("Task workspace component", () => {
     cy.contains("h3", "Nothing on your list yet").should("be.visible");
     cy.contains("h3", savedTask.title).should("not.exist");
     cy.get("dialog[open]").should("not.exist");
+  });
+
+  it("toggles completion on and off with a filled green check", () => {
+    let currentTask = { ...savedTask };
+    cy.intercept("GET", "/api/tasks?*", (request) => {
+      request.reply({
+        statusCode: 200,
+        body: { tasks: [currentTask], total: 1, page: 1, limit: 20 },
+      });
+    }).as("listTasks");
+    cy.intercept("PATCH", `/api/tasks/${savedTask.id}/completion`, (request) => {
+      const completed = request.body.completed as boolean;
+      expect(completed).to.equal(!currentTask.completed);
+      currentTask = { ...currentTask, completed };
+      request.reply({ statusCode: 200, body: { task: currentTask } });
+    }).as("toggleCompletion");
+
+    mountWorkspace([savedTask]);
+    cy.wait("@listTasks");
+
+    cy.get(`[aria-label="Mark ${savedTask.title} as complete"]`)
+      .should("have.attr", "aria-pressed", "false")
+      .click();
+    cy.wait("@toggleCompletion").its("request.body.completed").should("equal", true);
+    cy.get(".task-card").should("have.class", "task-card-completed");
+    cy.get(`[aria-label="Mark ${savedTask.title} as incomplete"]`)
+      .should("have.attr", "aria-pressed", "true")
+      .and("have.class", "is-completed");
+
+    cy.get(`[aria-label="Mark ${savedTask.title} as incomplete"]`).click();
+    cy.wait("@toggleCompletion").its("request.body.completed").should("equal", false);
+    cy.get(".task-card").should("not.have.class", "task-card-completed");
+    cy.get(`[aria-label="Mark ${savedTask.title} as complete"]`)
+      .should("have.attr", "aria-pressed", "false")
+      .and("not.have.class", "is-completed");
   });
 });

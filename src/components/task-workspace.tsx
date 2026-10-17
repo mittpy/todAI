@@ -29,6 +29,7 @@ export default function TaskWorkspace({ initialTasks, initialTotal }: {
   const [loadError, setLoadError] = useState("");
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [updatingTasks, setUpdatingTasks] = useState<Set<number>>(() => new Set());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -81,6 +82,34 @@ export default function TaskWorkspace({ initialTasks, initialTotal }: {
     else setRefreshVersion((version) => version + 1);
   }
 
+  async function toggleCompleted(task: Task) {
+    if (updatingTasks.has(task.id)) return;
+    const completed = !task.completed;
+    setUpdatingTasks((current) => new Set(current).add(task.id));
+    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, completed } : item));
+    setLoadError("");
+
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/completion`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not update task completion.");
+      setTasks((current) => current.map((item) => item.id === task.id ? result.task as Task : item));
+    } catch (cause) {
+      setTasks((current) => current.map((item) => item.id === task.id ? task : item));
+      setLoadError(cause instanceof Error ? cause.message : "Could not update task completion.");
+    } finally {
+      setUpdatingTasks((current) => {
+        const next = new Set(current);
+        next.delete(task.id);
+        return next;
+      });
+    }
+  }
+
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const firstVisible = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastVisible = Math.min(page * PAGE_SIZE, total);
@@ -124,8 +153,21 @@ export default function TaskWorkspace({ initialTasks, initialTotal }: {
       {loadError && <p className="workspace-error" role="alert">{loadError}</p>}
       <div className={`task-list${loading ? " task-list-loading" : ""}`} aria-busy={loading}>
         {tasks.map((task) => (
-          <article className="task-card" key={task.id}>
-            <span className="task-marker" aria-hidden="true"><span /></span>
+          <article className={`task-card${task.completed ? " task-card-completed" : ""}`} key={task.id}>
+            <button
+              className={`completion-toggle${task.completed ? " is-completed" : ""}`}
+              type="button"
+              aria-label={task.completed ? `Mark ${task.title} as incomplete` : `Mark ${task.title} as complete`}
+              aria-pressed={task.completed}
+              disabled={updatingTasks.has(task.id)}
+              onClick={() => toggleCompleted(task)}
+              title={task.completed ? "Mark as incomplete" : "Mark as complete"}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="m8 12 2.5 2.5L16.5 9" />
+              </svg>
+            </button>
             <div className="task-card-content">
               <h3>{task.title}</h3>
               {task.description && <p>{task.description}</p>}

@@ -9,6 +9,7 @@ export type Task = {
   description: string;
   priority: number;
   dueDate: string | null;
+  completed: boolean;
 };
 
 export type TaskInput = {
@@ -17,6 +18,8 @@ export type TaskInput = {
   priority: number;
   dueDate: string | null;
 };
+
+type StoredTask = Omit<Task, "completed"> & { completed: number };
 
 const TITLE_LIMIT = 200;
 const DESCRIPTION_LIMIT = 5000;
@@ -40,7 +43,8 @@ function getDatabase(): Promise<Database> {
           title TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND ${TITLE_LIMIT}),
           description TEXT NOT NULL DEFAULT '' CHECK (length(description) <= ${DESCRIPTION_LIMIT}),
           priority INTEGER NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 4),
-          due_date TEXT DEFAULT NULL
+          due_date TEXT DEFAULT NULL,
+          completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1))
         );
       `);
       const columns = await db.all<{ name: string }[]>("PRAGMA table_info(tasks)");
@@ -52,6 +56,11 @@ function getDatabase(): Promise<Database> {
       }
       if (!columnNames.has("due_date")) {
         await db.exec("ALTER TABLE tasks ADD COLUMN due_date TEXT DEFAULT NULL");
+      }
+      if (!columnNames.has("completed")) {
+        await db.exec(
+          "ALTER TABLE tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1))",
+        );
       }
       return db;
     })();
@@ -116,31 +125,36 @@ function escapeLike(value: string): string {
 export async function listTasks(search = "", limit?: number, offset = 0): Promise<Task[]> {
   const db = await getDatabase();
   const query = search.trim();
+  let rows: StoredTask[];
   if (!query) {
     if (limit !== undefined) {
-      return db.all<Task[]>(
-        "SELECT id, title, description, priority, due_date AS dueDate FROM tasks ORDER BY id DESC LIMIT ? OFFSET ?",
+      rows = await db.all<StoredTask[]>(
+        "SELECT id, title, description, priority, due_date AS dueDate, completed FROM tasks ORDER BY id DESC LIMIT ? OFFSET ?",
         limit,
         offset,
       );
+    } else {
+      rows = await db.all<StoredTask[]>("SELECT id, title, description, priority, due_date AS dueDate, completed FROM tasks ORDER BY id DESC");
     }
-    return db.all<Task[]>("SELECT id, title, description, priority, due_date AS dueDate FROM tasks ORDER BY id DESC");
+  } else {
+    const pattern = `%${escapeLike(query)}%`;
+    if (limit !== undefined) {
+      rows = await db.all<StoredTask[]>(
+        "SELECT id, title, description, priority, due_date AS dueDate, completed FROM tasks WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT ? OFFSET ?",
+        pattern,
+        pattern,
+        limit,
+        offset,
+      );
+    } else {
+      rows = await db.all<StoredTask[]>(
+        "SELECT id, title, description, priority, due_date AS dueDate, completed FROM tasks WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY id DESC",
+        pattern,
+        pattern,
+      );
+    }
   }
-  const pattern = `%${escapeLike(query)}%`;
-  if (limit !== undefined) {
-    return db.all<Task[]>(
-      "SELECT id, title, description, priority, due_date AS dueDate FROM tasks WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT ? OFFSET ?",
-      pattern,
-      pattern,
-      limit,
-      offset,
-    );
-  }
-  return db.all<Task[]>(
-    "SELECT id, title, description, priority, due_date AS dueDate FROM tasks WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY id DESC",
-    pattern,
-    pattern,
-  );
+  return rows.map(({ completed, ...task }) => ({ ...task, completed: completed === 1 }));
 }
 
 export async function countTasks(search = ""): Promise<number> {
@@ -158,7 +172,12 @@ export async function countTasks(search = ""): Promise<number> {
 
 export async function getTask(id: number): Promise<Task | undefined> {
   const db = await getDatabase();
-  return db.get<Task>("SELECT id, title, description, priority, due_date AS dueDate FROM tasks WHERE id = ?", id);
+  const task = await db.get<StoredTask>(
+    "SELECT id, title, description, priority, due_date AS dueDate, completed FROM tasks WHERE id = ?",
+    id,
+  );
+  if (!task) return undefined;
+  return { ...task, completed: task.completed === 1 };
 }
 
 export async function createTask(value: unknown): Promise<Task> {
@@ -172,12 +191,14 @@ export async function createTask(value: unknown): Promise<Task> {
     task.dueDate,
   );
   if (result.lastID === undefined) throw new Error("SQLite did not return the new task id.");
-  return { id: result.lastID, ...task };
+  return { id: result.lastID, ...task, completed: false };
 }
 
 export async function updateTask(id: number, value: unknown): Promise<Task | undefined> {
   const task = validateTaskInput(value);
   const db = await getDatabase();
+  const existing = await getTask(id);
+  if (!existing) return undefined;
   const result = await db.run(
     "UPDATE tasks SET title = ?, description = ?, priority = ?, due_date = ? WHERE id = ?",
     task.title,
@@ -187,7 +208,14 @@ export async function updateTask(id: number, value: unknown): Promise<Task | und
     id,
   );
   if (!(result.changes ?? 0)) return undefined;
-  return { id, ...task };
+  return { id, ...task, completed: existing.completed };
+}
+
+export async function setTaskCompleted(id: number, completed: boolean): Promise<Task | undefined> {
+  const db = await getDatabase();
+  const result = await db.run("UPDATE tasks SET completed = ? WHERE id = ?", completed ? 1 : 0, id);
+  if (!(result.changes ?? 0)) return undefined;
+  return getTask(id);
 }
 
 export async function deleteTask(id: number): Promise<boolean> {

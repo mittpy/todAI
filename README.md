@@ -37,8 +37,9 @@ SQLite uses write-ahead logging for reliable local reads and writes. Keep the da
 - `POST /api/tasks` — create a task with a required title, optional description, priority, and due date
 - `GET /api/tasks/:id` — fetch one task
 - `PATCH /api/tasks/:id` — update a task
+- `PATCH /api/tasks/:id/completion` — mark a task complete or incomplete with `{ "completed": true|false }`
 - `DELETE /api/tasks/:id` — delete a task
 
-Titles are trimmed and limited to 200 characters. Descriptions are optional and limited to 5,000 characters. Priority is optional (defaults to `3`) and accepts integers from `1` (highest) through `4`; due dates are optional and use `YYYY-MM-DD` or `null`. Existing SQLite databases receive the new priority and due-date columns automatically, with existing tasks migrated to priority `3` and no due date.
+Titles are trimmed and limited to 200 characters. Descriptions are optional and limited to 5,000 characters. Priority is optional (defaults to `3`) and accepts integers from `1` (highest) through `4`; due dates are optional and use `YYYY-MM-DD` or `null`. Tasks start incomplete and can be toggled complete or incomplete from the list. Existing SQLite databases receive new columns automatically, with existing tasks migrated to priority `3`, no due date, and incomplete status.
 
 The legacy `/tasks` and task-form URLs redirect to the task workspace on the home page.
