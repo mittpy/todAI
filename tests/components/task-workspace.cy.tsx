@@ -7,6 +7,8 @@ const savedTask: Task = {
   id: 42,
   title: "Plan the launch",
   description: "Prepare a short launch checklist",
+  priority: 3,
+  dueDate: null,
 };
 
 function mountWorkspace(tasks: Task[], total = tasks.length) {
@@ -26,10 +28,12 @@ describe("Task workspace component", () => {
     cy.intercept("POST", "/api/tasks", (request) => {
       expect(request.body).to.deep.equal({
         title: savedTask.title,
-        description: savedTask.description,
+        description: "",
+        priority: 3,
+        dueDate: null,
       });
-      created = savedTask;
-      request.reply({ statusCode: 201, body: { task: savedTask } });
+      created = { ...savedTask, description: "" };
+      request.reply({ statusCode: 201, body: { task: created } });
     }).as("createTask");
 
     mountWorkspace([]);
@@ -37,12 +41,12 @@ describe("Task workspace component", () => {
     cy.contains("button", "New task").click();
     cy.get("dialog[open]").should("contain.text", "Create a task");
     cy.get("#dialog-title").type(savedTask.title);
-    cy.get("#dialog-description").type(savedTask.description);
     cy.contains("button", "Create task").click();
 
     cy.wait("@createTask");
     cy.contains("h3", savedTask.title).should("be.visible");
-    cy.contains("p", savedTask.description).should("be.visible");
+    cy.get(".task-card").should("contain.text", "Priority 3");
+    cy.get(".task-card").should("not.contain.text", "Due ");
     cy.get("dialog[open]").should("not.exist");
   });
 
@@ -57,7 +61,9 @@ describe("Task workspace component", () => {
     cy.intercept("PATCH", `/api/tasks/${savedTask.id}`, (request) => {
       expect(request.body).to.deep.equal({
         title: "Plan the product launch",
-        description: "Review the launch checklist",
+        description: savedTask.description,
+        priority: 3,
+        dueDate: null,
       });
       currentTask = { id: savedTask.id, ...request.body };
       request.reply({ statusCode: 200, body: { task: currentTask } });
@@ -68,14 +74,90 @@ describe("Task workspace component", () => {
     cy.get(`[aria-label="Edit ${savedTask.title}"]`).click();
     cy.get("dialog[open]").should("contain.text", "Edit task");
     cy.get("#dialog-title").should("have.value", savedTask.title).clear().type("Plan the product launch");
-    cy.get("#dialog-description").clear().type("Review the launch checklist");
     cy.contains("button", "Save changes").click();
 
     cy.wait("@updateTask");
     cy.wait("@listTasks");
     cy.contains("h3", "Plan the product launch").should("be.visible");
-    cy.contains("p", "Review the launch checklist").should("be.visible");
+    cy.get(".task-card").should("contain.text", "Priority 3");
+    cy.get(".task-card").should("not.contain.text", "Due ");
     cy.contains("h3", savedTask.title).should("not.exist");
+  });
+
+  it("creates a task with a custom priority and due date", () => {
+    const task: Task = {
+      ...savedTask,
+      id: 43,
+      title: "File the release notes",
+      priority: 1,
+      dueDate: "2026-12-31",
+    };
+    let created: Task | undefined;
+    cy.intercept("GET", "/api/tasks?*", (request) => {
+      const tasks = created ? [created] : [];
+      request.reply({ statusCode: 200, body: { tasks, total: tasks.length, page: 1, limit: 20 } });
+    }).as("listTasks");
+    cy.intercept("POST", "/api/tasks", (request) => {
+      expect(request.body).to.deep.equal({
+        title: task.title,
+        description: "",
+        priority: 1,
+        dueDate: "2026-12-31",
+      });
+      created = task;
+      request.reply({ statusCode: 201, body: { task } });
+    }).as("createTaskWithOptionalFields");
+
+    mountWorkspace([]);
+    cy.wait("@listTasks");
+    cy.contains("button", "New task").click();
+    cy.get("#dialog-title").type(task.title);
+    cy.get("#dialog-priority").select("1");
+    cy.get("#dialog-due-date").type("2026-12-31");
+    cy.contains("button", "Create task").click();
+
+    cy.wait("@createTaskWithOptionalFields");
+    cy.contains("h3", task.title).should("be.visible");
+    cy.get(".task-card").should("contain.text", "Priority 1");
+    cy.get(".task-card").should("contain.text", "Dec 31, 2026");
+  });
+
+  it("updates optional priority and due date values", () => {
+    const taskWithOptionalFields: Task = {
+      ...savedTask,
+      priority: 4,
+      dueDate: "2026-11-15",
+    };
+    let currentTask = { ...taskWithOptionalFields };
+    cy.intercept("GET", "/api/tasks?*", (request) => {
+      request.reply({
+        statusCode: 200,
+        body: { tasks: [currentTask], total: 1, page: 1, limit: 20 },
+      });
+    }).as("listTasks");
+    cy.intercept("PATCH", `/api/tasks/${taskWithOptionalFields.id}`, (request) => {
+      expect(request.body).to.deep.equal({
+        title: taskWithOptionalFields.title,
+        description: taskWithOptionalFields.description,
+        priority: 1,
+        dueDate: "2026-12-01",
+      });
+      currentTask = { id: taskWithOptionalFields.id, ...request.body };
+      request.reply({ statusCode: 200, body: { task: currentTask } });
+    }).as("updateOptionalFields");
+
+    mountWorkspace([taskWithOptionalFields]);
+    cy.wait("@listTasks");
+    cy.get(`[aria-label="Edit ${taskWithOptionalFields.title}"]`).click();
+    cy.get("#dialog-priority").select("1");
+    cy.get("#dialog-due-date").clear().type("2026-12-01");
+    cy.contains("button", "Save changes").click();
+
+    cy.wait("@updateOptionalFields");
+    cy.wait("@listTasks");
+    cy.get(".task-card").should("contain.text", "Priority 1");
+    cy.get(".task-card").should("contain.text", "Dec 1, 2026");
+    cy.get(".task-card").should("not.contain.text", "Nov 15, 2026");
   });
 
   it("deletes a task after confirmation and shows the empty state", () => {

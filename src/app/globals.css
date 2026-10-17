@@ -81,6 +81,13 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .task-card-content { min-width: 0; flex: 1; }
 .task-card h3 { margin: 0; color: #343b35; font-size: 12px; font-weight: 600; line-height: 1.55; }
 .task-card-content > p { margin: 3px 0 0; color: #8b918a; font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+.task-metadata { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 7px; }
+.priority-badge, .due-date { display: inline-flex; min-height: 20px; align-items: center; padding: 2px 7px; border-radius: 6px; font-size: 9px; line-height: 1.2; }
+.priority-badge { background: #f0f2ef; color: #667168; }
+.priority-1 { background: #f9e8e4; color: #a04e40; }
+.priority-2 { background: #f8f0e3; color: #8c6940; }
+.priority-4 { background: #eef1ee; color: #788078; }
+.due-date { background: #edf3eb; color: var(--green-dark); }
 .task-actions { display: flex; flex: 0 0 auto; gap: 3px; opacity: .48; transition: opacity .15s; }
 .task-card:hover .task-actions, .task-card:focus-within .task-actions { opacity: 1; }
 .icon-action { display: grid; width: 31px; height: 31px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #68746a; cursor: pointer; font-size: 16px; }
@@ -124,6 +131,12 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .dialog-form { margin-top: 22px; padding: 0; border: 0; background: transparent; }
 .dialog-form .description-label { margin-top: 18px; }
 .dialog-form textarea { min-height: 100px; }
+.optional-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 18px; }
+.optional-field { display: block; min-width: 0; }
+.optional-field .field-label { display: flex; flex-wrap: wrap; gap: 4px; min-height: 17px; margin-bottom: 8px; }
+.optional-field .field-label span { font-size: 9px; }
+.optional-field select, .optional-field input { width: 100%; min-width: 0; height: 41px; padding: 0 10px; border: 1px solid #e5e9e2; border-radius: 7px; background: #fdfefc; color: var(--ink); font-size: 11px; }
+.optional-field select:focus, .optional-field input:focus { border-color: #9db69e; outline: 0; box-shadow: 0 0 0 3px #e8f0e7; }
 .dialog-actions { margin-top: 22px; }
 .button-danger { background: #a84f42; color: white; }
 .button-danger:hover:not(:disabled) { background: #913e34; }
@@ -189,6 +202,7 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
   .icon-action { width: 29px; height: 29px; }
   .task-dialog { padding: 21px 18px; }
   .dialog-heading h2 { font-size: 21px; }
+  .optional-fields { grid-template-columns: 1fr; gap: 11px; }
   .back-link { margin-bottom: 29px; }
 }
 @media (max-width: 380px) {

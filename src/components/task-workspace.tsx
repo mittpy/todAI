@@ -129,6 +129,10 @@ export default function TaskWorkspace({ initialTasks, initialTotal }: {
             <div className="task-card-content">
               <h3>{task.title}</h3>
               {task.description && <p>{task.description}</p>}
+              <div className="task-metadata">
+                <span className={`priority-badge priority-${task.priority}`}>Priority {task.priority}</span>
+                {task.dueDate && <span className="due-date">Due {formatDueDate(task.dueDate)}</span>}
+              </div>
             </div>
             <div className="task-actions">
               <button className="icon-action" type="button" onClick={() => setDialog({ mode: "edit", task })} aria-label={`Edit ${task.title}`} title="Edit task">↗</button>
@@ -169,6 +173,16 @@ export default function TaskWorkspace({ initialTasks, initialTotal }: {
   );
 }
 
+function formatDueDate(value: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 function TaskDialog({
   dialog,
   onClose,
@@ -186,6 +200,8 @@ function TaskDialog({
   const task = dialog.mode === "create" ? undefined : dialog.task;
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
+  const [priority, setPriority] = useState(String(task?.priority ?? 3));
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -206,7 +222,7 @@ function TaskDialog({
       const response = await fetch(isEdit ? `/api/tasks/${task!.id}` : "/api/tasks", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, priority: Number(priority), dueDate: dueDate || null }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not save this task.");
@@ -274,6 +290,21 @@ function TaskDialog({
           <input id="dialog-title" name="title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required autoFocus placeholder="e.g. Send the project proposal" />
           <label className="field-label description-label" htmlFor="dialog-description">Description <span>Optional</span></label>
           <textarea id="dialog-description" name="description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={5000} rows={4} placeholder="Add a little more detail..." />
+          <div className="optional-fields">
+            <label className="optional-field" htmlFor="dialog-priority">
+              <span className="field-label">Priority <span>Optional · 1 is highest</span></span>
+              <select id="dialog-priority" name="priority" value={priority} onChange={(event) => setPriority(event.target.value)}>
+                <option value="1">1 · Highest</option>
+                <option value="2">2 · High</option>
+                <option value="3">3 · Normal</option>
+                <option value="4">4 · Low</option>
+              </select>
+            </label>
+            <label className="optional-field" htmlFor="dialog-due-date">
+              <span className="field-label">Due date <span>Optional</span></span>
+              <input id="dialog-due-date" name="dueDate" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            </label>
+          </div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="form-actions">
             <button className="button button-primary" type="submit" disabled={saving}>{saving ? "Saving..." : isEdit ? "Save changes" : "Create task"} <span aria-hidden="true">→</span></button>
